@@ -1,11 +1,12 @@
 <?php
+
 namespace VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools;
 
-use Enqueue\AmqpTools\RabbitMqDlxDelayStrategy;
 use Interop\Amqp\AmqpContext;
-use Interop\Amqp\AmqpDestination;
 use Interop\Amqp\AmqpMessage;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Jobs\RabbitMQJob;
+use Interop\Amqp\AmqpDestination;
+use Enqueue\AmqpTools\RabbitMqDlxDelayStrategy;
 
 class DlxDelayStrategy extends RabbitMqDlxDelayStrategy implements BackoffStrategyAware
 {
@@ -25,11 +26,11 @@ class DlxDelayStrategy extends RabbitMqDlxDelayStrategy implements BackoffStrate
         if ($this->backoffStrategy) {
             $delay = $this->backoffStrategy->backoffDelayTime(
                 $delay,
-                $message->getProperty(RabbitMQJob::ATTEMPT_COUNT_HEADERS_KEY,1)
+                $message->getProperty(RabbitMQJob::ATTEMPT_COUNT_HEADERS_KEY, 1)
             );
         }
 
-        parent::delayMessage($context,$dest,$message,$delay);
+        parent::delayMessage($context, $dest, $message, $delay);
     }
 
 }

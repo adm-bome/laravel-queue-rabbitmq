@@ -2,7 +2,6 @@
 
 namespace VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools;
 
-
 class PolynomialBackoffStrategy extends AbstractBackoffStrategy
 {
     /**
@@ -16,5 +15,4 @@ class PolynomialBackoffStrategy extends AbstractBackoffStrategy
     {
         return intval(pow($attempt, $this->options->get('factor', 2)) * $delay);
     }
-
 }

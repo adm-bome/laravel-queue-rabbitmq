@@ -2,10 +2,10 @@
 
 namespace VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Connectors;
 
-use Enqueue\AmqpTools\DelayStrategy;
 use Illuminate\Support\Arr;
 use Interop\Amqp\AmqpContext;
 use InvalidArgumentException;
+use Enqueue\AmqpTools\DelayStrategy;
 use Illuminate\Contracts\Queue\Queue;
 use Interop\Amqp\AmqpConnectionFactory;
 use Enqueue\AmqpTools\DelayStrategyAware;
@@ -16,9 +16,9 @@ use Illuminate\Queue\Connectors\ConnectorInterface;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\RabbitMQQueue;
 use Interop\Amqp\AmqpConnectionFactory as InteropAmqpConnectionFactory;
 use Enqueue\AmqpLib\AmqpConnectionFactory as EnqueueAmqpConnectionFactory;
-use VladimirYuldashev\LaravelQueueRabbitMQ\Horizon\RabbitMQQueue as HorizonRabbitMQQueue;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\BackoffStrategyAware;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\ConstantBackoffStrategy;
+use VladimirYuldashev\LaravelQueueRabbitMQ\Horizon\RabbitMQQueue as HorizonRabbitMQQueue;
 
 class RabbitMQConnector implements ConnectorInterface
 {
@@ -44,33 +44,33 @@ class RabbitMQConnector implements ConnectorInterface
     {
         $factoryClass = Arr::get($config, 'factory_class', EnqueueAmqpConnectionFactory::class);
 
-        if (! class_exists($factoryClass) || ! (new \ReflectionClass($factoryClass))->implementsInterface(InteropAmqpConnectionFactory::class)) {
+        if (!class_exists($factoryClass) || !(new \ReflectionClass($factoryClass))->implementsInterface(InteropAmqpConnectionFactory::class)) {
             throw new \LogicException(sprintf('The factory_class option has to be valid class that implements "%s"', InteropAmqpConnectionFactory::class));
         }
 
         /** @var AmqpConnectionFactory $factory */
         $factory = new $factoryClass([
-            'dsn' => Arr::get($config, 'dsn'),
-            'host' => Arr::get($config, 'host', '127.0.0.1'),
-            'port' => Arr::get($config, 'port', 5672),
-            'user' => Arr::get($config, 'login', 'guest'),
-            'pass' => Arr::get($config, 'password', 'guest'),
-            'vhost' => Arr::get($config, 'vhost', '/'),
-            'ssl_on' => Arr::get($config, 'ssl_params.ssl_on', false),
-            'ssl_verify' => Arr::get($config, 'ssl_params.verify_peer', true),
-            'ssl_cacert' => Arr::get($config, 'ssl_params.cafile'),
-            'ssl_cert' => Arr::get($config, 'ssl_params.local_cert'),
-            'ssl_key' => Arr::get($config, 'ssl_params.local_key'),
+            'dsn'            => Arr::get($config, 'dsn'),
+            'host'           => Arr::get($config, 'host', '127.0.0.1'),
+            'port'           => Arr::get($config, 'port', 5672),
+            'user'           => Arr::get($config, 'login', 'guest'),
+            'pass'           => Arr::get($config, 'password', 'guest'),
+            'vhost'          => Arr::get($config, 'vhost', '/'),
+            'ssl_on'         => Arr::get($config, 'ssl_params.ssl_on', false),
+            'ssl_verify'     => Arr::get($config, 'ssl_params.verify_peer', true),
+            'ssl_cacert'     => Arr::get($config, 'ssl_params.cafile'),
+            'ssl_cert'       => Arr::get($config, 'ssl_params.local_cert'),
+            'ssl_key'        => Arr::get($config, 'ssl_params.local_key'),
             'ssl_passphrase' => Arr::get($config, 'ssl_params.passphrase'),
         ]);
 
         if ($factory instanceof DelayStrategyAware) {
             /** @var DelayStrategy $delayStrategy */
-            $delayStrategyClass = Arr::get($config, 'delay.strategy',RabbitMqDlxDelayStrategy::class);
+            $delayStrategyClass = Arr::get($config, 'delay.strategy', RabbitMqDlxDelayStrategy::class);
             $delayStrategy = new $delayStrategyClass();
 
             if ($delayStrategy instanceof BackoffStrategyAware) {
-                $backoffStrategyClass = Arr::get($config, 'delay.backoff.strategy',ConstantBackoffStrategy::class);
+                $backoffStrategyClass = Arr::get($config, 'delay.backoff.strategy', ConstantBackoffStrategy::class);
                 $backoffStrategy = new $backoffStrategyClass(Arr::get($config, 'delay.backoff.options', []));
                 $delayStrategy->setBackoffStrategy($backoffStrategy);
             }

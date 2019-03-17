@@ -2,7 +2,6 @@
 
 namespace VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools;
 
-
 class ExponentialBackoffStrategy extends AbstractBackoffStrategy
 {
     /**
@@ -20,5 +19,4 @@ class ExponentialBackoffStrategy extends AbstractBackoffStrategy
 
         return pow(2, $attempt) * $delay;
     }
-
 }

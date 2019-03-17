@@ -2,7 +2,6 @@
 
 namespace VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools;
 
-
 class LinearBackoffStrategy extends AbstractBackoffStrategy
 {
     /**
@@ -16,5 +15,4 @@ class LinearBackoffStrategy extends AbstractBackoffStrategy
     {
         return $attempt * $delay;
     }
-
 }

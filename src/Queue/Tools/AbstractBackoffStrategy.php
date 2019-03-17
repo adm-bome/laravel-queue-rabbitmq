@@ -2,7 +2,6 @@
 
 namespace VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools;
 
-
 use Symfony\Component\HttpFoundation\ParameterBag;
 
 abstract class AbstractBackoffStrategy implements BackoffStrategy
@@ -13,5 +12,4 @@ abstract class AbstractBackoffStrategy implements BackoffStrategy
     {
         $this->options = new ParameterBag($options);
     }
-
 }
