@@ -4,9 +4,9 @@ namespace VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools;
 
 use Interop\Amqp\AmqpContext;
 use Interop\Amqp\AmqpMessage;
-use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Jobs\RabbitMQJob;
 use Interop\Amqp\AmqpDestination;
 use Enqueue\AmqpTools\RabbitMqDlxDelayStrategy;
+use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Jobs\RabbitMQJob;
 
 class DlxDelayStrategy extends RabbitMqDlxDelayStrategy implements BackoffStrategyAware
 {
@@ -32,5 +32,4 @@ class DlxDelayStrategy extends RabbitMqDlxDelayStrategy implements BackoffStrate
 
         parent::delayMessage($context, $dest, $message, $delay);
     }
-
 }

@@ -44,7 +44,7 @@ class RabbitMQConnector implements ConnectorInterface
     {
         $factoryClass = Arr::get($config, 'factory_class', EnqueueAmqpConnectionFactory::class);
 
-        if (!class_exists($factoryClass) || !(new \ReflectionClass($factoryClass))->implementsInterface(InteropAmqpConnectionFactory::class)) {
+        if (! class_exists($factoryClass) || ! (new \ReflectionClass($factoryClass))->implementsInterface(InteropAmqpConnectionFactory::class)) {
             throw new \LogicException(sprintf('The factory_class option has to be valid class that implements "%s"', InteropAmqpConnectionFactory::class));
         }
 
