@@ -2,6 +2,7 @@
 
 namespace VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Connectors;
 
+use Enqueue\AmqpTools\DelayStrategy;
 use Illuminate\Support\Arr;
 use Interop\Amqp\AmqpContext;
 use InvalidArgumentException;
@@ -16,6 +17,8 @@ use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\RabbitMQQueue;
 use Interop\Amqp\AmqpConnectionFactory as InteropAmqpConnectionFactory;
 use Enqueue\AmqpLib\AmqpConnectionFactory as EnqueueAmqpConnectionFactory;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Horizon\RabbitMQQueue as HorizonRabbitMQQueue;
+use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\BackoffStrategyAware;
+use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\ConstantBackoffStrategy;
 
 class RabbitMQConnector implements ConnectorInterface
 {
@@ -62,7 +65,9 @@ class RabbitMQConnector implements ConnectorInterface
         ]);
 
         if ($factory instanceof DelayStrategyAware) {
-            $factory->setDelayStrategy(new RabbitMqDlxDelayStrategy());
+            /** @var DelayStrategy $delayStrategy */
+            $delayStrategy = new (Arr::get($config, 'delay.strategy',RabbitMqDlxDelayStrategy::class))();
+            $factory->setDelayStrategy($delayStrategy);
         }
 
         /** @var AmqpContext $context */

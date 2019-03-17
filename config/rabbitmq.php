@@ -24,6 +24,13 @@ return [
      */
     'factory_class' => Enqueue\AmqpLib\AmqpConnectionFactory::class,
 
+    /*
+     * Manage the delay strategy from the config.
+     */
+    'delay' => [
+        'strategy' => null,
+    ],
+
     'host' => env('RABBITMQ_HOST', '127.0.0.1'),
     'port' => env('RABBITMQ_PORT', 5672),
 
