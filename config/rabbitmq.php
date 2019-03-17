@@ -26,9 +26,30 @@ return [
 
     /*
      * Manage the delay strategy from the config.
+     *
+     * The delay strategy can be for example:
+     *  - \VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\DlxDelayStrategy::class
+     *
+     * This strategy is BackoffAware and by default a ConstantBackoffStrategy is assigned.
+     *
+     * You can assign different backoffStrategies with options, for example:
+     *  - VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\ConstantBackoffStrategy::class
+     *  - VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\LinearBackoffStrategy::class
+     *  - VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\ExponentialBackoffStrategy::class
+     *  - VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\PolynomialBackoffStrategy::class
+     *
+     * The backoff strategy options must be an array of key -> value.
+     *
+     * For reference about RabbitMQ backoff strategy and the working see the following article:
+     * https://m.alphasights.com/exponential-backoff-with-rabbitmq-78386b9bec81
+     *
      */
     'delay' => [
-        'strategy' => null,
+        'strategy' => VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\DlxDelayStrategy::class,
+        'backoff'  => [
+            'strategy' => null,
+            'options'  => null,
+        ],
     ],
 
     'host' => env('RABBITMQ_HOST', '127.0.0.1'),
