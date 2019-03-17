@@ -66,10 +66,12 @@ class RabbitMQConnector implements ConnectorInterface
 
         if ($factory instanceof DelayStrategyAware) {
             /** @var DelayStrategy $delayStrategy */
-            $delayStrategy = new (Arr::get($config, 'delay.strategy',RabbitMqDlxDelayStrategy::class))();
+            $delayStrategyClass = Arr::get($config, 'delay.strategy',RabbitMqDlxDelayStrategy::class);
+            $delayStrategy = new $delayStrategyClass();
 
             if ($delayStrategy instanceof BackoffStrategyAware) {
-                $backoffStrategy = new (Arr::get($config, 'delay.backoff.strategy',ConstantBackoffStrategy::class))(Arr::get($config, 'delay.backoff.options', []));
+                $backoffStrategyClass = Arr::get($config, 'delay.backoff.strategy',ConstantBackoffStrategy::class);
+                $backoffStrategy = new $backoffStrategyClass(Arr::get($config, 'delay.backoff.options', []));
                 $delayStrategy->setBackoffStrategy($backoffStrategy);
             }
 
