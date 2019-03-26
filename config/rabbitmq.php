@@ -24,6 +24,45 @@ return [
      */
     'factory_class' => Enqueue\AmqpLib\AmqpConnectionFactory::class,
 
+    /*
+     * ## Manage the delay strategy from the config.
+     *
+     * The delay strategy can be for example:
+     *  - \VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\DlxDelayStrategy::class
+     *
+     * ### Backoff Strategy
+     *
+     * This strategy is BackoffAware and by default a ConstantBackoffStrategy is assigned.
+     *
+     * You can assign different backoffStrategies with options, for example:
+     *  - VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\ConstantBackoffStrategy::class
+     *  - VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\LinearBackoffStrategy::class
+     *  - VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\ExponentialBackoffStrategy::class
+     *  - VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\PolynomialBackoffStrategy::class
+     *
+     * The backoff strategy options must be an array of key -> value.
+     *
+     * For reference about RabbitMQ backoff strategy and the working see the following article:
+     * https://m.alphasights.com/exponential-backoff-with-rabbitmq-78386b9bec81
+     *
+     * ### First-in First-out concept
+     *
+     * U can easily prioritize delayed messages. When set to `true` a message will be set with a higher priority.
+     * This means that delayed messages are handled first when returning to the queue.
+     *
+     * This is useful when your queue has allot of jobs, and you want to make sure, a job will be handled
+     * as soon as possible. This way RabbitMq handles the jobs and the way they are consumed by workers.
+     *
+     */
+    'delay' => [
+        'strategy' => env('RABBITMQ_DELAY_STRATEGY'),
+        'backoff'  => [
+            'strategy' => env('RABBITMQ_DELAY_BACKOFF_STRATEGY'),
+            'options'  => [],
+        ],
+        'prioritize'=> env('RABBITMQ_DELAY_PRIORITIZE'),
+    ],
+
     'host' => env('RABBITMQ_HOST', '127.0.0.1'),
     'port' => env('RABBITMQ_PORT', 5672),
 
