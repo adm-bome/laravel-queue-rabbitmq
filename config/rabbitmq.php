@@ -45,6 +45,14 @@ return [
      * For reference about RabbitMQ backoff strategy and the working see the following article:
      * https://m.alphasights.com/exponential-backoff-with-rabbitmq-78386b9bec81
      *
+     * ### First-in First-out concept
+     *
+     * U can easily prioritize delayed messages. When set to `true` a message will be set with a higher priority.
+     * This means that delayed messages are handled first when returning to the queue.
+     *
+     * This is useful when your queue has allot of jobs, and you want to make sure, a job will be handled
+     * as soon as possible. This way RabbitMq handles the jobs and the way they are consumed by workers.
+     *
      */
     'delay' => [
         'strategy' => env('RABBITMQ_DELAY_STRATEGY'),
@@ -52,6 +60,7 @@ return [
             'strategy' => env('RABBITMQ_DELAY_BACKOFF_STRATEGY'),
             'options'  => [],
         ],
+        'prioritize'=> env('RABBITMQ_DELAY_PRIORITIZE')
     ],
 
     'host' => env('RABBITMQ_HOST', '127.0.0.1'),

@@ -11,9 +11,9 @@ use Interop\Amqp\AmqpTopic;
 use Interop\Queue\Exception\InvalidDestinationException;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Jobs\RabbitMQJob;
 
-class DlxDelayStrategy implements DelayStrategy, BackoffStrategyAware
+class DlxDelayStrategy implements DelayStrategy, BackoffStrategyAware, PrioritizeAware
 {
-    use BackoffStrategyAwareTrait;
+    use BackoffStrategyAwareTrait, PrioritizeAwareTrait;
 
     /**
      * Delay message.
@@ -33,7 +33,7 @@ class DlxDelayStrategy implements DelayStrategy, BackoffStrategyAware
 
         $delayMessage = $this->createDelayMessage($context, $message);
         $delayQueue   = $this->createDelayQueue($context, $dest, $message, $delayMessage, $delay);
-        $producer     = $this->createProducer($context);
+        $producer     = $this->createProducer($context, ++$attempt);
 
         $producer->send($delayQueue, $delayMessage);
     }
@@ -92,11 +92,17 @@ class DlxDelayStrategy implements DelayStrategy, BackoffStrategyAware
 
     /**
      * @param AmqpContext $context
+     * @param int $priority
      * @return \Interop\Amqp\AmqpProducer
+     * @throws \Interop\Queue\Exception\PriorityNotSupportedException
      */
-    private function createProducer(AmqpContext $context): \Interop\Amqp\AmqpProducer
+    private function createProducer(AmqpContext $context, int $priority = null): \Interop\Amqp\AmqpProducer
     {
         $producer = $context->createProducer();
+
+        if ($this->prioritize && $priority) {
+            $producer->setPriority($priority);
+        }
 
         return $producer;
     }

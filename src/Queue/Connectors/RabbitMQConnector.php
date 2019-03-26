@@ -21,6 +21,7 @@ use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\BackoffStrategyAware;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\ConstantBackoffStrategy;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Horizon\Listeners\RabbitMQFailedEvent;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Horizon\RabbitMQQueue as HorizonRabbitMQQueue;
+use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\prioritizeAware;
 
 class RabbitMQConnector implements ConnectorInterface
 {
@@ -75,6 +76,10 @@ class RabbitMQConnector implements ConnectorInterface
                 $backoffStrategyClass = Arr::get($config, 'delay.backoff.strategy', ConstantBackoffStrategy::class);
                 $backoffStrategy = new $backoffStrategyClass(Arr::get($config, 'delay.backoff.options', []));
                 $delayStrategy->setBackoffStrategy($backoffStrategy);
+            }
+
+            if ($delayStrategy instanceof prioritizeAware) {
+                $delayStrategy->setPrioritize(Arr::get($config, 'delay.prioritize'));
             }
 
             $factory->setDelayStrategy($delayStrategy);
