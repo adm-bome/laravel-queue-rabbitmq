@@ -2,7 +2,7 @@
 
 namespace VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools;
 
-interface prioritizeAware
+interface PrioritizeAware
 {
     public function setPrioritize(?bool $prioritize = null);
 }

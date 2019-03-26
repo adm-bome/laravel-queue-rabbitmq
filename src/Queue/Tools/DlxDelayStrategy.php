@@ -2,12 +2,12 @@
 
 namespace VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools;
 
-use Enqueue\AmqpTools\DelayStrategy;
+use Interop\Amqp\AmqpQueue;
+use Interop\Amqp\AmqpTopic;
 use Interop\Amqp\AmqpContext;
 use Interop\Amqp\AmqpMessage;
 use Interop\Amqp\AmqpDestination;
-use Interop\Amqp\AmqpQueue;
-use Interop\Amqp\AmqpTopic;
+use Enqueue\AmqpTools\DelayStrategy;
 use Interop\Queue\Exception\InvalidDestinationException;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Jobs\RabbitMQJob;
 
@@ -28,12 +28,12 @@ class DlxDelayStrategy implements DelayStrategy, BackoffStrategyAware, Prioritiz
      */
     public function delayMessage(AmqpContext $context, AmqpDestination $dest, AmqpMessage $message, int $delay): void
     {
-        $attempt      = intval($message->getProperty(RabbitMQJob::ATTEMPT_COUNT_HEADERS_KEY, 1));
-        $delay        = $this->calculateDelay($delay, $attempt);
+        $attempt = intval($message->getProperty(RabbitMQJob::ATTEMPT_COUNT_HEADERS_KEY, 1));
+        $delay = $this->calculateDelay($delay, $attempt);
 
         $delayMessage = $this->createDelayMessage($context, $message);
-        $delayQueue   = $this->createDelayQueue($context, $dest, $message, $delayMessage, $delay);
-        $producer     = $this->createProducer($context, ++$attempt);
+        $delayQueue = $this->createDelayQueue($context, $dest, $message, $delayMessage, $delay);
+        $producer = $this->createProducer($context, ++$attempt);
 
         $producer->send($delayQueue, $delayMessage);
     }
@@ -50,23 +50,23 @@ class DlxDelayStrategy implements DelayStrategy, BackoffStrategyAware, Prioritiz
     protected function createDelayQueue(AmqpContext $context, AmqpDestination $dest, AmqpMessage $message, AmqpMessage $delayMessage, int $delay): AmqpQueue
     {
         if ($dest instanceof AmqpTopic) {
-            $routingKey = $message->getRoutingKey() ? '.' . $message->getRoutingKey() : '';
-            $name       = sprintf('enqueue.%s%s.%s.x.delay', $dest->getTopicName(), $routingKey, $delay);
+            $routingKey = $message->getRoutingKey() ? '.'.$message->getRoutingKey() : '';
+            $name = sprintf('enqueue.%s%s.%s.x.delay', $dest->getTopicName(), $routingKey, $delay);
 
             $delayQueue = $context->createQueue($name);
             $delayQueue->addFlag(AmqpTopic::FLAG_DURABLE);
             $delayQueue->setArgument('x-message-ttl', $delay);
             $delayQueue->setArgument('x-dead-letter-exchange', $dest->getTopicName());
-            $delayQueue->setArgument('x-dead-letter-routing-key', (string)$delayMessage->getRoutingKey());
+            $delayQueue->setArgument('x-dead-letter-routing-key', (string) $delayMessage->getRoutingKey());
         } elseif ($dest instanceof AmqpQueue) {
-            $delayQueue = $context->createQueue('enqueue.' . $dest->getQueueName() . '.' . $delay . '.delayed');
+            $delayQueue = $context->createQueue('enqueue.'.$dest->getQueueName().'.'.$delay.'.delayed');
             $delayQueue->addFlag(AmqpTopic::FLAG_DURABLE);
             $delayQueue->setArgument('x-message-ttl', $delay);
             $delayQueue->setArgument('x-dead-letter-exchange', '');
             $delayQueue->setArgument('x-dead-letter-routing-key', $dest->getQueueName());
         } else {
             throw new InvalidDestinationException(sprintf('The destination must be an instance of %s but got %s.',
-                AmqpTopic::class . '|' . AmqpQueue::class,
+                AmqpTopic::class.'|'.AmqpQueue::class,
                 get_class($dest)
             ));
         }

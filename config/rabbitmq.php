@@ -60,7 +60,7 @@ return [
             'strategy' => env('RABBITMQ_DELAY_BACKOFF_STRATEGY'),
             'options'  => [],
         ],
-        'prioritize'=> env('RABBITMQ_DELAY_PRIORITIZE')
+        'prioritize'=> env('RABBITMQ_DELAY_PRIORITIZE'),
     ],
 
     'host' => env('RABBITMQ_HOST', '127.0.0.1'),

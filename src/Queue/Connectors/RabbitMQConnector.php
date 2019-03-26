@@ -16,12 +16,13 @@ use Enqueue\AmqpTools\RabbitMqDlxDelayStrategy;
 use Illuminate\Queue\Connectors\ConnectorInterface;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\RabbitMQQueue;
 use Interop\Amqp\AmqpConnectionFactory as InteropAmqpConnectionFactory;
+use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\PrioritizeAware;
 use Enqueue\AmqpLib\AmqpConnectionFactory as EnqueueAmqpConnectionFactory;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\BackoffStrategyAware;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\ConstantBackoffStrategy;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Horizon\Listeners\RabbitMQFailedEvent;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Horizon\RabbitMQQueue as HorizonRabbitMQQueue;
-use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\prioritizeAware;
+
 
 class RabbitMQConnector implements ConnectorInterface
 {
@@ -78,7 +79,7 @@ class RabbitMQConnector implements ConnectorInterface
                 $delayStrategy->setBackoffStrategy($backoffStrategy);
             }
 
-            if ($delayStrategy instanceof prioritizeAware) {
+            if ($delayStrategy instanceof PrioritizeAware) {
                 $delayStrategy->setPrioritize(Arr::get($config, 'delay.prioritize'));
             }
 
