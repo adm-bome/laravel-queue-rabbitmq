@@ -25,10 +25,12 @@ return [
     'factory_class' => Enqueue\AmqpLib\AmqpConnectionFactory::class,
 
     /*
-     * Manage the delay strategy from the config.
+     * ## Manage the delay strategy from the config.
      *
      * The delay strategy can be for example:
      *  - \VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\DlxDelayStrategy::class
+     *
+     * ### Backoff Strategy
      *
      * This strategy is BackoffAware and by default a ConstantBackoffStrategy is assigned.
      *
@@ -45,10 +47,10 @@ return [
      *
      */
     'delay' => [
-        'strategy' => VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\DlxDelayStrategy::class,
+        'strategy' => env('RABBITMQ_DELAY_STRATEGY'),
         'backoff'  => [
-            'strategy' => null,
-            'options'  => null,
+            'strategy' => env('RABBITMQ_DELAY_BACKOFF_STRATEGY'),
+            'options'  => [],
         ],
     ],
 
