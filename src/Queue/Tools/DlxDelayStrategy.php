@@ -28,12 +28,14 @@ class DlxDelayStrategy implements DelayStrategy, BackoffStrategyAware, Prioritiz
      */
     public function delayMessage(AmqpContext $context, AmqpDestination $dest, AmqpMessage $message, int $delay): void
     {
-        $attempt = intval($message->getProperty(RabbitMQJob::ATTEMPT_COUNT_HEADERS_KEY, 1));
+        $currentAttempt = intval($message->getProperty(RabbitMQJob::ATTEMPT_COUNT_HEADERS_KEY, 1));
+        $attempt = $currentAttempt - 1;
+
         $delay = $this->calculateDelay($delay, $attempt);
 
         $delayMessage = $this->createDelayMessage($context, $message);
         $delayQueue = $this->createDelayQueue($context, $dest, $message, $delayMessage, $delay);
-        $producer = $this->createProducer($context, ++$attempt);
+        $producer = $this->createProducer($context, $attempt);
 
         $producer->send($delayQueue, $delayMessage);
     }
@@ -56,12 +58,14 @@ class DlxDelayStrategy implements DelayStrategy, BackoffStrategyAware, Prioritiz
             $delayQueue = $context->createQueue($name);
             $delayQueue->addFlag(AmqpTopic::FLAG_DURABLE);
             $delayQueue->setArgument('x-message-ttl', $delay);
+            $delayQueue->setArgument('x-expires', $delay * 2);
             $delayQueue->setArgument('x-dead-letter-exchange', $dest->getTopicName());
             $delayQueue->setArgument('x-dead-letter-routing-key', (string) $delayMessage->getRoutingKey());
         } elseif ($dest instanceof AmqpQueue) {
             $delayQueue = $context->createQueue('enqueue.'.$dest->getQueueName().'.'.$delay.'.delayed');
             $delayQueue->addFlag(AmqpTopic::FLAG_DURABLE);
             $delayQueue->setArgument('x-message-ttl', $delay);
+            $delayQueue->setArgument('x-expires', $delay * 2);
             $delayQueue->setArgument('x-dead-letter-exchange', '');
             $delayQueue->setArgument('x-dead-letter-routing-key', $dest->getQueueName());
         } else {
