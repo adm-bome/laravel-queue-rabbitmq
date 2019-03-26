@@ -1,11 +1,14 @@
 {
-  "name": "vladimir-yuldashev/laravel-queue-rabbitmq",
-  "description": "RabbitMQ driver for Laravel Queue. Supports Laravel Horizon",
+  "name": "adm-bome/laravel-queue-rabbitmq",
+  "description": "RabbitMQ driver for Laravel Queue. Supports Laravel Horizon.",
   "license": "MIT",
   "authors": [
     {
       "name": "Vladimir Yuldashev",
       "email": "misterio92@gmail.com"
+    },
+    {
+      "name": "Emiel Bom"
     }
   ],
   "require": {
