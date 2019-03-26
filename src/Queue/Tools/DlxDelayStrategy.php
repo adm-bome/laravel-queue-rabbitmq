@@ -58,12 +58,14 @@ class DlxDelayStrategy implements DelayStrategy, BackoffStrategyAware, Prioritiz
             $delayQueue = $context->createQueue($name);
             $delayQueue->addFlag(AmqpTopic::FLAG_DURABLE);
             $delayQueue->setArgument('x-message-ttl', $delay);
+            $delayQueue->setArgument('x-expires', $delay * 2);
             $delayQueue->setArgument('x-dead-letter-exchange', $dest->getTopicName());
             $delayQueue->setArgument('x-dead-letter-routing-key', (string) $delayMessage->getRoutingKey());
         } elseif ($dest instanceof AmqpQueue) {
             $delayQueue = $context->createQueue('enqueue.'.$dest->getQueueName().'.'.$delay.'.delayed');
             $delayQueue->addFlag(AmqpTopic::FLAG_DURABLE);
             $delayQueue->setArgument('x-message-ttl', $delay);
+            $delayQueue->setArgument('x-expires', $delay * 2);
             $delayQueue->setArgument('x-dead-letter-exchange', '');
             $delayQueue->setArgument('x-dead-letter-routing-key', $dest->getQueueName());
         } else {
