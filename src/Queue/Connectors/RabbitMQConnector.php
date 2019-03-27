@@ -69,7 +69,7 @@ class RabbitMQConnector implements ConnectorInterface
         ]);
 
         if ($factory instanceof DelayStrategyAware) {
-            if (! class_exists($delayStrategyClass = Arr::get($config, 'delay.strategy')) || false === $delayStrategyClass instanceof DelayStrategy) {
+            if (! class_exists($delayStrategyClass = Arr::get($config, 'delay.strategy')) || ! in_array(DelayStrategy::class, class_implements($delayStrategyClass))) {
                 $delayStrategyClass = RabbitMqDlxDelayStrategy::class;
             }
 
@@ -77,7 +77,7 @@ class RabbitMQConnector implements ConnectorInterface
             $delayStrategy = new $delayStrategyClass();
 
             if ($delayStrategy instanceof BackoffStrategyAware) {
-                if (! class_exists($backoffStrategyClass = Arr::get($config, 'delay.backoff.strategy')) || false === $backoffStrategyClass instanceof BackoffStrategy) {
+                if (! class_exists($backoffStrategyClass = Arr::get($config, 'delay.backoff.strategy')) || ! in_array(BackoffStrategy::class, class_implements($backoffStrategyClass))) {
                     $backoffStrategyClass = ConstantBackoffStrategy::class;
                 }
 
