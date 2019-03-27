@@ -55,9 +55,9 @@ return [
      *
      */
     'delay' => [
-        'strategy' => env('RABBITMQ_DELAY_STRATEGY'),
+        'strategy' => env('RABBITMQ_DELAY_STRATEGY', \Enqueue\AmqpTools\RabbitMqDlxDelayStrategy::class),
         'backoff'  => [
-            'strategy' => env('RABBITMQ_DELAY_BACKOFF_STRATEGY'),
+            'strategy' => env('RABBITMQ_DELAY_BACKOFF_STRATEGY', \VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\ConstantBackoffStrategy::class),
             'options'  => [],
         ],
         'prioritize'=> env('RABBITMQ_DELAY_PRIORITIZE'),

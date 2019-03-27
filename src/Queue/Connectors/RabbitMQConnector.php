@@ -16,6 +16,7 @@ use Enqueue\AmqpTools\RabbitMqDlxDelayStrategy;
 use Illuminate\Queue\Connectors\ConnectorInterface;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\RabbitMQQueue;
 use Interop\Amqp\AmqpConnectionFactory as InteropAmqpConnectionFactory;
+use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\BackoffStrategy;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\PrioritizeAware;
 use Enqueue\AmqpLib\AmqpConnectionFactory as EnqueueAmqpConnectionFactory;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Tools\BackoffStrategyAware;
@@ -68,12 +69,19 @@ class RabbitMQConnector implements ConnectorInterface
         ]);
 
         if ($factory instanceof DelayStrategyAware) {
+            if (!class_exists($delayStrategyClass = Arr::get($config, 'delay.strategy')) || false === $delayStrategyClass instanceof DelayStrategy) {
+                $delayStrategyClass = RabbitMqDlxDelayStrategy::class;
+            }
+
             /** @var DelayStrategy $delayStrategy */
-            $delayStrategyClass = Arr::get($config, 'delay.strategy') ?? RabbitMqDlxDelayStrategy::class;
             $delayStrategy = new $delayStrategyClass();
 
             if ($delayStrategy instanceof BackoffStrategyAware) {
-                $backoffStrategyClass = Arr::get($config, 'delay.backoff.strategy') ?? ConstantBackoffStrategy::class;
+                if (!class_exists($backoffStrategyClass = Arr::get($config, 'delay.backoff.strategy')) || false === $backoffStrategyClass instanceof BackoffStrategy) {
+                    $backoffStrategyClass = ConstantBackoffStrategy::class;
+                }
+
+                /** @var BackoffStrategy $backoffStrategy */
                 $backoffStrategy = new $backoffStrategyClass(Arr::get($config, 'delay.backoff.options', []));
                 $delayStrategy->setBackoffStrategy($backoffStrategy);
             }
