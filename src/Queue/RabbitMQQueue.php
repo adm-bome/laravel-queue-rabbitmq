@@ -130,25 +130,14 @@ class RabbitMQQueue extends Queue implements QueueContract
      */
     public function pushRaw($payload, $queue = null, array $options = [])
     {
-        $destination = $this->getQueue($queue);
-        $exchange = $this->getExchange();
+        [$destination, $exchange, $exchangeType, $attempts] = $this->publishProperties($queue, $options);
 
-        // When a exchange is defined and no exchange is present in RabbitMQ, create an exchange.
-        if ($exchange && ! $this->isExchangeExists($exchange)) {
-            $this->declareExchange($exchange, $this->getExchangeType());
-        }
+        $this->declareDestination($destination, $exchange, $exchangeType);
 
-        // When no exchange is defined, create a queue for amq.direct publishing, but only if it not already present.
-        if (! $exchange && ! $this->isQueueExists($destination)) {
-            $this->declareQueue($destination, true, false, $this->getQueueArguments($destination));
-        }
-
-        [$message, $correlationId] = ($attempts = Arr::get($options, 'attempts'))
-            ? $this->createMessage($payload, $attempts)
-            : $this->createMessage($payload);
+        [$message, $correlationId] = $this->createMessage($payload, $attempts);
 
         // Publish the message
-        $this->channel->basic_publish($message, $exchange, $this->getRoutingKey($destination), true, false);
+        $this->channel->basic_publish($message, $exchange, $destination, true, false);
 
         return $correlationId;
     }
@@ -204,28 +193,32 @@ class RabbitMQQueue extends Queue implements QueueContract
      */
     public function bulk($jobs, $data = '', $queue = null): void
     {
-        $destination = $this->getQueue($queue);
-        $exchange = $this->getExchange();
-
-        // When a exchange is defined and no exchange is present in RabbitMQ, create an exchange.
-        if ($exchange && ! $this->isExchangeExists($exchange)) {
-            $this->declareExchange($exchange, $this->getExchangeType());
-        }
-
-        // When no exchange is defined, create a queue for amq.direct publishing, but only if it not already present.
-        if (! $exchange && ! $this->isQueueExists($destination)) {
-            $this->declareQueue($destination, true, false, $this->getQueueArguments($destination));
-        }
-
         foreach ((array) $jobs as $job) {
-            [$message] = $this->createMessage(
-                $this->createPayload($job, $queue, $data)
-            );
-
-            $this->channel->batch_basic_publish($message, $exchange, $destination);
+            $this->bulkRaw($this->createPayload($job, $queue, $data), $queue, ['job' => $job]);
         }
 
         $this->channel->publish_batch();
+    }
+
+    /**
+     * @param string $payload
+     * @param null $queue
+     * @param array $options
+     *
+     * @return mixed
+     * @throws AMQPProtocolChannelException
+     */
+    public function bulkRaw(string $payload, $queue = null, array $options = [])
+    {
+        [$destination, $exchange, $exchangeType, $attempts] = $this->publishProperties($queue, $options);
+
+        $this->declareDestination($destination, $exchange, $exchangeType);
+
+        [$message, $correlationId] = $this->createMessage($payload, $attempts);
+
+        $this->channel->batch_basic_publish($message, $exchange, $destination);
+
+        return $correlationId;
     }
 
     /**
@@ -642,7 +635,7 @@ class RabbitMQQueue extends Queue implements QueueContract
      * @param string|null $type
      * @return string
      */
-    protected function getExchangeType(string $type = null): string
+    protected function getExchangeType(?string $type = null): string
     {
         return @constant(AMQPExchangeType::class.'::'.Str::upper($type ?: Arr::get($this->options, 'exchange_type') ?: 'direct')) ?: AMQPExchangeType::DIRECT;
     }
@@ -698,5 +691,44 @@ class RabbitMQQueue extends Queue implements QueueContract
     protected function isQueueDeclared(string $name): bool
     {
         return in_array($name, $this->queues, true);
+    }
+
+    /**
+     *
+     * @param string $destination
+     * @param string|null $exchange
+     *
+     * @param string|null $exchangeType
+     *
+     * @throws AMQPProtocolChannelException
+     */
+    private function declareDestination(string $destination, ?string $exchange = null, string $exchangeType = AMQPExchangeType::DIRECT): void
+    {
+        // When a exchange is defined and no exchange is present in RabbitMQ, create an exchange.
+        if ($exchange && ! $this->isExchangeExists($exchange)) {
+            $this->declareExchange($exchange, $exchangeType);
+        }
+        // When no exchange is defined, create a queue for amq.direct publishing, but only if it not already present.
+        if (! $exchange && ! $this->isQueueExists($destination)) {
+            $this->declareQueue($destination, true, false, $this->getQueueArguments($destination));
+        }
+    }
+
+    /**
+     * @param $queue
+     * @param array $options
+     *
+     * @return array
+     */
+    private function publishProperties($queue, array $options = []): array
+    {
+        $queue = $this->getQueue($queue);
+        $attempts = Arr::get($options, 'attempts') ?: 0;
+
+        $destination = $this->getRoutingKey($queue);
+        $exchange = $this->getExchange();
+        $exchangeType = $this->getExchangeType();
+
+        return [$destination, $exchange, $exchangeType, $attempts];
     }
 }
