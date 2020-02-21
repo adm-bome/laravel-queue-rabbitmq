@@ -10,10 +10,11 @@ use Illuminate\Support\Arr;
 use PhpAmqpLib\Exception\AMQPProtocolChannelException;
 use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Wire\AMQPTable;
+use VladimirYuldashev\LaravelQueueRabbitMQ\Contracts\Queue\RpcContract;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Horizon\RabbitMQQueue as HorizonRabbitMQQueue;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\RabbitMQQueue;
 
-class RabbitMQJob extends Job implements JobContract
+class RabbitMQJob extends Job implements JobContract, RpcContract
 {
     /**
      * The RabbitMQ queue instance.
@@ -65,6 +66,38 @@ class RabbitMQJob extends Job implements JobContract
     public function getRawBody(): string
     {
         return $this->message->getBody();
+    }
+
+    /**
+     * @return bool
+     */
+    public function isProcessedRpc(): bool
+    {
+        return $this->rpcResult() || $this->rpcError();
+    }
+
+    /**
+     * @return mixed|null
+     */
+    public function rpcResult()
+    {
+        return $this->payload()['result'] ?? null;
+    }
+
+    /**
+     * @return mixed|null
+     */
+    public function rpcError()
+    {
+        return $this->payload()['error'] ?? null;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function replyTo(): ?string
+    {
+        return Arr::get($this->message->get_properties(), 'reply-to') ?: null;
     }
 
     /**

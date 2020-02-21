@@ -69,7 +69,7 @@ Add connection to `config/queue.php`:
         
     ],
 
-    // ...    
+    // ...
 ],
 ```
 
@@ -98,7 +98,7 @@ When you want to prioritize messages when they were delayed, then this is possib
         ],
     ],
 
-    // ...    
+    // ...
 ],
 ```
 
@@ -127,7 +127,7 @@ When you want to publish messages against an exchange with routing-key's, then t
         ],
     ],
 
-    // ...    
+    // ...
 ],
 ```
 
@@ -157,7 +157,7 @@ When you want to instruct RabbitMQ to reroute failed messages to a exchange or a
         ],
     ],
 
-    // ...    
+    // ...
 ],
 ```
 
@@ -185,6 +185,59 @@ There are two ways of consuming messages.
 
 2. `rabbitmq:consume` command which is provided by this package. This command utilizes `basic_consume` and is more performant than `basic_get` by ~2x.
 
+
+## Laravel Jobs with RPC [Optional]
+
+Sometimes you need to inform a 3th-party application or to do something and return the result.
+This can be done by calling an Api (synchronous) or asynchronous when your not interested when the job is processed and don't need an immediate reply.
+
+The later is called [RPC](https://en.wikipedia.org/wiki/Remote_procedure_call) and here is the [specification](https://www.jsonrpc.org/specification).
+Rpc is a [common pattern](https://www.enterpriseintegrationpatterns.com/patterns/messaging/RequestReply.html) and with a message broker like RabbitMQ, jobs are made asynchronous. See the [example](https://www.rabbitmq.com/tutorials/tutorial-six-php.html).
+
+With this library you also make it possible to send an job as RpcJob. When the job returns to the queue, the job is rebuild and can access the `result` or `error`.
+When sending the job via rpc the job class becomes a 'notification' job, and is now only there to handle the 'reply result/error'.
+
+Things to note for Laravel Rpc Jobs:
+- **Must** implement the interface `RpcJob` in this library.
+- Optionally can implement the interface `RpcConfigurable` in this library.
+
+Things to note for the Server-side / Remote worker:
+- The 'payload' and 'headers' from the original message, **must** be returned in the reply message.  
+- The `correlation-id` property in the original message, **must** be set to the `correlation-id` of the reply message.
+- When the worker is successfully done processing, the result must be added under the key `result` in the payload.
+- When the worker was not able to process, the error must be added under the key `error` in the payload.
+- The worker **must** reply with a message, to the `reply-to` property in the original message.
+- The worker also **can decide to** publish against an exchange when splitting the `reply-to` property with character `@` into a `$destination` and an `$exchange`.
+
+When you want to configure the connections with rpc defaults for jobs that do not implement the configuration methods, then this is possible by adding extra options.
+- When the exchange is omitted, RabbitMQ will use the `amq.direct` exchange for the routing-key
+- When routing-key is omitted, the routing-key, by default the `queue` name, is prefixed with `'rpc-'`.
+- When using `%s` in the routing-key the queue_name will be substituted.
+
+> Note: When using rpc in a job with exchange and with routing-key, u probably need to create your exchange/queue with bindings yourself.
+  
+```php
+'connections' => [
+    // ...
+
+    'rabbitmq' => [
+        // ...
+
+        'options' => [
+            'queue' => [
+                // ...
+
+                'rpc_exchange' => 'application-2',
+                'rpc_exchange_type' => 'topic',
+                'rpc_routing_key' => 'application-1.%s',
+            ],
+        ],
+    ],
+
+    // ...
+],
+```
+ 
 ## Testing
 
 Setup RabbitMQ using `docker-compose`:

@@ -7,6 +7,7 @@ namespace VladimirYuldashev\LaravelQueueRabbitMQ\Queue;
 use ErrorException;
 use Exception;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
+use Illuminate\Queue\InvalidPayloadException;
 use Illuminate\Queue\Queue;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
@@ -16,6 +17,8 @@ use PhpAmqpLib\Exception\AMQPProtocolChannelException;
 use PhpAmqpLib\Exchange\AMQPExchangeType;
 use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Wire\AMQPTable;
+use VladimirYuldashev\LaravelQueueRabbitMQ\Contracts\Jobs\RpcConfigurable;
+use VladimirYuldashev\LaravelQueueRabbitMQ\Contracts\Jobs\RpcJob;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\Jobs\RabbitMQJob;
 
 class RabbitMQQueue extends Queue implements QueueContract
@@ -120,7 +123,7 @@ class RabbitMQQueue extends Queue implements QueueContract
      */
     public function push($job, $data = '', $queue = null)
     {
-        return $this->pushRaw($this->createPayload($job, $queue, $data), $queue, []);
+        return $this->pushRaw($this->createPayload($job, $queue, $data), $queue, ['job' => $job]);
     }
 
     /**
@@ -130,11 +133,11 @@ class RabbitMQQueue extends Queue implements QueueContract
      */
     public function pushRaw($payload, $queue = null, array $options = [])
     {
-        [$destination, $exchange, $exchangeType, $attempts] = $this->publishProperties($queue, $options);
+        [$destination, $exchange, $exchangeType, $replyTo, $attempts] = $this->publishProperties($queue, $options);
 
         $this->declareDestination($destination, $exchange, $exchangeType);
 
-        [$message, $correlationId] = $this->createMessage($payload, $attempts);
+        [$message, $correlationId] = $this->createMessage($payload, $attempts, $replyTo);
 
         // Publish the message
         $this->channel->basic_publish($message, $exchange, $destination, true, false);
@@ -210,11 +213,11 @@ class RabbitMQQueue extends Queue implements QueueContract
      */
     public function bulkRaw(string $payload, $queue = null, array $options = [])
     {
-        [$destination, $exchange, $exchangeType, $attempts] = $this->publishProperties($queue, $options);
+        [$destination, $exchange, $exchangeType, $replyTo, $attempts] = $this->publishProperties($queue, $options);
 
         $this->declareDestination($destination, $exchange, $exchangeType);
 
-        [$message, $correlationId] = $this->createMessage($payload, $attempts);
+        [$message, $correlationId] = $this->createMessage($payload, $attempts, $replyTo);
 
         $this->channel->batch_basic_publish($message, $exchange, $destination);
 
@@ -257,6 +260,27 @@ class RabbitMQQueue extends Queue implements QueueContract
         }
 
         return null;
+    }
+
+    /**
+     * Create a payload string from the given job and data.
+     *
+     * @param  string|object  $job
+     * @param  string  $queue
+     * @param  mixed  $data
+     * @return string
+     *
+     * @throws \Illuminate\Queue\InvalidPayloadException
+     */
+    protected function createPayload($job, $queue, $data = '')
+    {
+        $payload = parent::createPayload($job, $queue, $data);
+
+        if (! $this->isRpcJob($job)) {
+            return $payload;
+        }
+
+        return $this->createRpcPayload($job, $payload);
     }
 
     /**
@@ -468,9 +492,11 @@ class RabbitMQQueue extends Queue implements QueueContract
      *
      * @param $payload
      * @param int $attempts
+     * @param string|null $replyTo
+     *
      * @return array
      */
-    protected function createMessage($payload, int $attempts = 0): array
+    protected function createMessage($payload, int $attempts = 0, ?string $replyTo = null): array
     {
         $properties = [
             'content_type' => 'application/json',
@@ -483,6 +509,10 @@ class RabbitMQQueue extends Queue implements QueueContract
 
         if ($this->isPrioritizeDelayed()) {
             $properties['priority'] = $attempts;
+        }
+
+        if ($replyTo) {
+            $properties['reply-to'] = $replyTo;
         }
 
         $message = new AMQPMessage($payload, $properties);
@@ -521,7 +551,7 @@ class RabbitMQQueue extends Queue implements QueueContract
      */
     protected function getRandomId(): string
     {
-        return Str::random(32);
+        return Str::uuid();
     }
 
     /**
@@ -723,12 +753,150 @@ class RabbitMQQueue extends Queue implements QueueContract
     private function publishProperties($queue, array $options = []): array
     {
         $queue = $this->getQueue($queue);
+        $replyTo = null;
         $attempts = Arr::get($options, 'attempts') ?: 0;
 
         $destination = $this->getRoutingKey($queue);
         $exchange = $this->getExchange();
         $exchangeType = $this->getExchangeType();
 
-        return [$destination, $exchange, $exchangeType, $attempts];
+        if (($job = Arr::get($options, 'job')) && $this->isRpcJob($job)) {
+            [$replyTo, $destination, $exchangeType, $exchange] = $this->rpcPublishProperties($queue, $destination, $exchange, $job);
+        }
+
+        return [$destination, $exchange, $exchangeType, $replyTo, $attempts];
+    }
+
+    /**
+     * @param RpcJob $job
+     *
+     * @return array
+     */
+    protected function createRpcPayloadArray(RpcJob $job): array
+    {
+        return [
+            "jsonrpc" => "2.0",
+            "method" => $job->rpcMethod() ?: null,
+            "params" => $job->rpcParams() ?: null,
+        ];
+    }
+
+    /**
+     * @param $job
+     * @param string $payload
+     *
+     * @return false|string
+     */
+    protected function createRpcPayload($job, string $payload)
+    {
+        $payload = json_encode(array_merge([], json_decode($payload, true), $this->createRpcPayloadArray($job)));
+
+        if (JSON_ERROR_NONE !== json_last_error()) {
+            throw new InvalidPayloadException(
+                'Unable to JSON encode payload. Error code: '.json_last_error()
+            );
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @param $job
+     *
+     * @return bool
+     */
+    protected function isRpcJob($job)
+    {
+        if (! is_object($job)) {
+            return false;
+        }
+
+        return in_array(RpcJob::class, class_uses_recursive($job));
+    }
+
+    /**
+     * @param $job
+     *
+     * @return bool
+     */
+    protected function isRpcConfigurable($job)
+    {
+        if (! is_object($job)) {
+            return false;
+        }
+
+        return in_array(RpcConfigurable::class, class_uses_recursive($job));
+    }
+
+    /**
+     * @param $queue
+     * @param string $destination
+     * @param string|null $exchange
+     * @param $job
+     *
+     * @return array
+     */
+    private function rpcPublishProperties($queue, string $destination, ?string $exchange, $job): array
+    {
+        $replyTo = $this->getRpcCallbackQueue($destination, $exchange);
+
+        if ($this->isRpcConfigurable($job)) {
+            /** @var RpcConfigurable $job */
+            $destination = $this->getRpcRoutingKey($job->rpcDestination($queue), $job->rpcRoutingKey());
+            $exchangeType = $this->getRpcExchangeType($job->rpcExchangeType());
+            $exchange = $this->getRpcExchange($job->rpcExchange());
+        } else {
+            $destination = $this->getRpcRoutingKey($queue);
+            $exchangeType = $this->getRpcExchangeType();
+            $exchange = $this->getRpcExchange();
+        }
+
+        return array($replyTo, $destination, $exchangeType, $exchange);
+    }
+
+    /**
+     * @param string $destination
+     *
+     * @param string|null $exchange
+     *
+     * @return string
+     */
+    protected function getRpcCallbackQueue(string $destination, ?string $exchange = null): string
+    {
+        return trim(sprintf('%s%s', $destination, $exchange ? '@'.$exchange : null), '-.');
+    }
+
+    /**
+     *
+     * @param string $destination
+     * @param string|null $routingKey
+     *
+     * @return string
+     */
+    protected function getRpcRoutingKey(string $destination, ?string $routingKey = null): string
+    {
+        return trim(sprintf($routingKey ?: Arr::get($this->options, 'rpc_routing_key') ?: 'rpc-%s', $destination), '.-');
+    }
+
+    /**
+     * Get the Rpc exchange name, or &null; as default value.
+     *
+     * @param string|null $exchange
+     * @return string|null
+     */
+    protected function getRpcExchange(?string $exchange = null): ?string
+    {
+        return $exchange ?: Arr::get($this->options, 'rpc_exchange') ?: null;
+    }
+
+    /**
+     * Get the Rpc exchangeType, or AMQPExchangeType::DIRECT as default.
+     *
+     * @param string|null $type
+     * @return string
+     */
+    protected function getRpcExchangeType(?string $type = null): string
+    {
+        return $this->getExchangeType($type ?: Arr::get($this->options, 'rpc_exchange_type'));
     }
 }
