@@ -1,3 +1,5 @@
+## NOTE: This fork is deprecated, all changes can now be found at the main [repository](https://github.com/vyuldashev/laravel-queue-rabbitmq). As I'm a contributor in the main repo ;)
+
 RabbitMQ Queue driver for Laravel
 ======================
 [![Latest Stable Version](https://poser.pugx.org/vladimir-yuldashev/laravel-queue-rabbitmq/v/stable?format=flat-square)](https://packagist.org/packages/vladimir-yuldashev/laravel-queue-rabbitmq)
